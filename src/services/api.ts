@@ -59,10 +59,42 @@ export async function fetchProfileByEmail(email: string) {
   const { data, error } = await supabase
     .from('utilisateurs')
     .select('*')
-    .ilike('email', email)
+    .ilike('email', email.trim())
     .maybeSingle()
   if (error) throw error
   return data as Utilisateur | null
+}
+
+export async function fetchProfileByAuthId(authId: string) {
+  const { data, error } = await supabase
+    .from('utilisateurs')
+    .select('*')
+    .eq('auth_id', authId)
+    .maybeSingle()
+  if (error) throw error
+  return data as Utilisateur | null
+}
+
+/** Récupère le profil connecté — RPC get_my_profile (contourne RLS) avec fallback */
+export async function fetchMyProfile(): Promise<Utilisateur | null> {
+  const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_profile')
+  if (!rpcError && rpcData) {
+    return rpcData as Utilisateur
+  }
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
+
+  if (user.id) {
+    const byAuthId = await fetchProfileByAuthId(user.id)
+    if (byAuthId) return byAuthId
+  }
+
+  if (user.email) {
+    return fetchProfileByEmail(user.email)
+  }
+
+  return null
 }
 
 export async function createUtilisateurProfile(user: Omit<Utilisateur, 'id'> & { auth_id?: string }) {

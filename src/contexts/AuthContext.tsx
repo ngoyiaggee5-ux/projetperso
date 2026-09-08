@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import type { Session } from '@supabase/supabase-js'
 import { mapAuthError, mapProfileError } from '@/lib/auth-errors'
 import { supabase } from '@/lib/supabase'
-import { addAuditLog, createUtilisateurProfile, fetchProfileByEmail, updateUtilisateur } from '@/services/api'
+import { addAuditLog, createUtilisateurProfile, fetchMyProfile, fetchProfileByEmail, updateUtilisateur } from '@/services/api'
 import type { AuthProfile, UserRole } from '@/types'
 import { ADMIN_PAGES, HIDDEN_PAGES } from '@/types'
 
@@ -23,11 +23,11 @@ async function loadProfile(session: Session): Promise<AuthProfile | null> {
   const email = session.user.email
   if (!email) return null
 
-  let profile = await fetchProfileByEmail(email)
+  let profile = await fetchMyProfile()
   if (!profile) {
     profile = await createUtilisateurProfile({
       nom: session.user.user_metadata?.nom ?? email.split('@')[0],
-      email,
+      email: email.trim().toLowerCase(),
       role: 'magasinier',
       statut: 'pending',
       auth_id: session.user.id,
@@ -86,12 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     let userProfile: AuthProfile | null = null
     try {
-      let profile = await fetchProfileByEmail(normalizedEmail)
+      let profile = await fetchMyProfile()
       if (!profile) {
         return {
           error:
-            'Compte Auth OK, mais aucun profil dans la table utilisateurs. ' +
-            'Exécutez supabase/setup-auth.sql ou inscrivez-vous via l\'application.',
+            'Compte Auth OK, mais profil introuvable dans utilisateurs. ' +
+            'Exécutez supabase/setup-auth.sql dans Supabase (section vérification en bas).',
         }
       }
 
@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const existing = await fetchProfileByEmail(normalizedEmail)
       if (existing) return { error: 'Cet email est déjà utilisé.' }
     } catch {
-      // continue — profil peut être inaccessible avant auth
+      // RLS peut bloquer avant auth — on continue
     }
 
     const { data, error } = await supabase.auth.signUp({

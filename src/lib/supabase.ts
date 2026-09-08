@@ -21,4 +21,5 @@ export function getSupabase(): SupabaseClient {
 export const supabase = {
   get auth() { return getSupabase().auth },
   from(table: string) { return getSupabase().from(table) },
+  rpc(fn: string, args?: object) { return getSupabase().rpc(fn, args) },
 }

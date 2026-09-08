@@ -1,60 +1,113 @@
 -- ================================================================
 -- FreshStock — Configuration Auth (À EXÉCUTER APRÈS migration.sql)
 -- ================================================================
--- ÉTAPE MANUELLE D'ABORD :
---   Supabase Dashboard → Authentication → Users → Add user
---   - Email : admin@freshstock.com (ou votre email)
---   - Password : choisissez un NOUVEAU mot de passe
---   - Cochez "Auto Confirm User"
---
--- Puis exécutez ce script :
+-- Si vous voyez "Profil utilisateur introuvable" :
+--   1. Authentication → Users → vérifiez que le user existe (Auto Confirm)
+--   2. Exécutez CE SCRIPT en entier
 -- ================================================================
 
--- 1. Lier automatiquement auth_id (table utilisateurs ↔ auth.users) par email
+-- 1. Lier auth_id automatiquement (utilisateurs ↔ auth.users)
 UPDATE public.utilisateurs u
 SET auth_id = au.id
 FROM auth.users au
-WHERE lower(u.email) = lower(au.email)
+WHERE lower(trim(u.email)) = lower(trim(au.email))
   AND (u.auth_id IS NULL OR u.auth_id != au.id);
 
--- 2. Activer les comptes existants (adapter les emails si besoin)
+-- 2. Activer les comptes par défaut
 UPDATE public.utilisateurs
 SET statut = 'active'
-WHERE email IN (
+WHERE lower(email) IN (
   'admin@freshstock.com',
   'manager@freshstock.com',
   'caissier@freshstock.com',
   'magasinier@freshstock.com'
 );
 
--- 3. S'assurer que l'admin a le bon rôle
 UPDATE public.utilisateurs
 SET role = 'admin', statut = 'active'
-WHERE email = 'admin@freshstock.com';
+WHERE lower(email) = 'admin@freshstock.com';
 
--- 4. Policies RLS manquantes pour login / inscription
-DROP POLICY IF EXISTS "users_insert_own" ON public.utilisateurs;
-CREATE POLICY "users_insert_own" ON public.utilisateurs
-  FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL AND lower(email) = lower(auth.jwt() ->> 'email'));
+-- 3. Fonctions helper (SECURITY DEFINER = contourne RLS en interne)
+CREATE OR REPLACE FUNCTION public.get_user_role()
+RETURNS TEXT
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT role FROM public.utilisateurs
+  WHERE auth_id = auth.uid()
+     OR lower(trim(email)) = lower(trim(auth.jwt() ->> 'email'))
+  LIMIT 1;
+$$;
 
-DROP POLICY IF EXISTS "users_update_own" ON public.utilisateurs;
-CREATE POLICY "users_update_own" ON public.utilisateurs
-  FOR UPDATE
-  USING (lower(email) = lower(auth.jwt() ->> 'email'));
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT COALESCE(public.get_user_role() = 'admin', false);
+$$;
 
--- 5. Lecture profil au login (own email ou admin)
+-- 4. Fonction pour récupérer SON propre profil (utilisée par l'app)
+CREATE OR REPLACE FUNCTION public.get_my_profile()
+RETURNS json
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT to_json(u.*)
+  FROM public.utilisateurs u
+  WHERE u.auth_id = auth.uid()
+     OR lower(trim(u.email)) = lower(trim(auth.jwt() ->> 'email'))
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION public.get_my_profile() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.get_user_role() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO authenticated;
+
+-- 5. Policies utilisateurs — on supprime les anciennes puis on recrée
 DROP POLICY IF EXISTS "users_read_own" ON public.utilisateurs;
+DROP POLICY IF EXISTS "users_admin_all" ON public.utilisateurs;
+DROP POLICY IF EXISTS "users_insert_own" ON public.utilisateurs;
+DROP POLICY IF EXISTS "users_update_own" ON public.utilisateurs;
+DROP POLICY IF EXISTS "users_admin_manage" ON public.utilisateurs;
+
 CREATE POLICY "users_read_own" ON public.utilisateurs
   FOR SELECT
   USING (
     auth.uid() IS NOT NULL
-    AND (lower(email) = lower(auth.jwt() ->> 'email') OR public.is_admin())
+    AND (
+      auth_id = auth.uid()
+      OR lower(trim(email)) = lower(trim(auth.jwt() ->> 'email'))
+      OR public.is_admin()
+    )
   );
 
--- 7. Lecture données pour tout utilisateur authentifié (si tables vides à cause du RLS)
---    Ces policies remplacent les anciennes si déjà créées par migration.sql
+CREATE POLICY "users_insert_own" ON public.utilisateurs
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() IS NOT NULL
+    AND lower(trim(email)) = lower(trim(auth.jwt() ->> 'email'))
+  );
 
+CREATE POLICY "users_update_own" ON public.utilisateurs
+  FOR UPDATE
+  USING (
+    auth_id = auth.uid()
+    OR lower(trim(email)) = lower(trim(auth.jwt() ->> 'email'))
+    OR public.is_admin()
+  );
+
+CREATE POLICY "users_admin_manage" ON public.utilisateurs
+  FOR ALL
+  USING (public.is_admin());
+
+-- 6. Lecture des données métier (utilisateur connecté)
 DROP POLICY IF EXISTS "data_read_auth" ON public.categories;
 CREATE POLICY "data_read_auth" ON public.categories FOR SELECT USING (auth.uid() IS NOT NULL);
 
@@ -79,10 +132,13 @@ CREATE POLICY "details_read" ON public.details_ventes FOR SELECT USING (auth.uid
 DROP POLICY IF EXISTS "audit_read" ON public.audit_logs;
 CREATE POLICY "audit_read" ON public.audit_logs FOR SELECT USING (auth.uid() IS NOT NULL);
 
--- 8. Vérification — doit afficher auth_id rempli et statut active
-SELECT id, nom, email, role, statut, auth_id
-FROM public.utilisateurs
-ORDER BY id;
+DROP POLICY IF EXISTS "audit_insert" ON public.audit_logs;
+CREATE POLICY "audit_insert" ON public.audit_logs FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- 9. (Optionnel) Une fois tous les users migrés vers Supabase Auth :
--- ALTER TABLE public.utilisateurs DROP COLUMN IF EXISTS mot_de_passe;
+-- 7. Vérification
+SELECT u.id, u.nom, u.email, u.role, u.statut, u.auth_id, au.email AS auth_email
+FROM public.utilisateurs u
+LEFT JOIN auth.users au ON au.id = u.auth_id
+ORDER BY u.id;
+
+-- auth_id doit être rempli | statut = active | auth_email = email
