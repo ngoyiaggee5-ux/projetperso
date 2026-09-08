@@ -5,15 +5,26 @@ Application ERP de gestion d'entrepôt — **React + Vite + TypeScript + Supabas
 ## Stack
 
 - **React 19** + **Vite 6** + **TypeScript**
-- **Tailwind CSS 4**
+- **Tailwind CSS 3**
 - **Supabase Auth** (authentification sécurisée)
 - **TanStack Query** (cache & sync données)
 - **TanStack Table** (tableaux produits)
-- **Recharts** (graphiques dashboard)
 - **React Router** (navigation)
 - **Sonner** (notifications)
 
-## Démarrage
+## Déploiement Netlify
+
+1. Connectez le repo GitHub à Netlify
+2. Netlify utilise `netlify.toml` (build + redirects SPA)
+3. **Obligatoire** — **Site configuration → Environment variables** :
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+4. **Deploys → Trigger deploy → Clear cache and deploy site**
+5. Supabase → **Authentication → URL Configuration** : ajoutez votre URL Netlify
+
+Sans les variables, un message d'erreur s'affiche (plus d'écran blanc).
+
+## Démarrage local
 
 ```bash
 npm install
