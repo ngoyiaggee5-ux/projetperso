@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.5, user-scalable=yes">
+    <title>FreshStock - ERP de Gestion d'Entrepôt</title>
+    
+    <!-- CSS Externe -->
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Bibliothèques externes -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Scripts externes -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    
+    <!-- Script Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="app.js"></script>
+</head>
+<body>
+
+<!-- ===== PAGE DE CONNEXION ===== -->
+<div id="loginPage" class="login-page-container">
+    <div class="login-container">
+        <div class="login-card">
+            <div class="logo">
+                <div class="icon-wrapper"><i class="fas fa-boxes"></i></div>
+                <h3><span>FreshStock</span></h3>
+                <p>ERP de gestion d'entrepôt</p>
+            </div>
+            <div class="tab-links">
+                <button class="active" onclick="switchAuthTab('login')"><i class="fas fa-sign-in-alt"></i> Connexion</button>
+                <button onclick="switchAuthTab('register')"><i class="fas fa-user-plus"></i> Inscription</button>
+            </div>
+            <div id="authLogin">
+                <div id="loginAlert" class="alert" style="display:none;"></div>
+                <form id="loginForm" autocomplete="off">
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope me-1"></i> Email</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="loginEmail" class="form-control" placeholder="Entrez votre email">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock me-1"></i> Mot de passe</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="loginPassword" class="form-control" placeholder="Entrez votre mot de passe">
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('loginPassword', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" id="loginBtn" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i> Se connecter
+                    </button>
+                </form>
+            </div>
+            <div id="authRegister" style="display:none;">
+                <div id="registerAlert" class="alert" style="display:none;"></div>
+                <form id="registerForm" onsubmit="return false;" autocomplete="off">
+                    <div class="form-group">
+                        <label><i class="fas fa-user me-1"></i> Nom complet</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-user"></i>
+                            <input type="text" id="regNom" class="form-control" placeholder="Votre nom complet" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope me-1"></i> Email</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-envelope"></i>
+                            <input type="email" id="regEmail" class="form-control" placeholder="votre@email.com" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-lock me-1"></i> Mot de passe</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-lock"></i>
+                            <input type="password" id="regPassword" class="form-control" placeholder="Min 6 caractères" required minlength="6">
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('regPassword', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label><i class="fas fa-check me-1"></i> Confirmer</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-check"></i>
+                            <input type="password" id="regPasswordConfirm" class="form-control" placeholder="Confirmer le mot de passe" required>
+                            <button type="button" class="toggle-password" onclick="togglePasswordVisibility('regPasswordConfirm', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-login" onclick="inscription()" style="background: linear-gradient(135deg, #2e7d32, #1b5e20); box-shadow: 0 6px 25px rgba(46,125,50,0.35);">
+                        <i class="fas fa-user-plus"></i> S'inscrire
+                    </button>
+                </form>
+                <div class="auth-footer">
+                    Déjà inscrit ? <a href="#" onclick="switchAuthTab('login')">Connectez-vous</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== APPLICATION PRINCIPALE ===== -->
+<div id="mainApp" style="display:none;">
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+    
+    <div class="sidebar" id="sidebar">
+        <div class="brand">
+            <h4><i class="fas fa-boxes"></i>FreshStock</h4>
+            <small>ERP Gestion d'entrepôt</small>
+        </div>
+        <div class="nav-section">Navigation</div>
+        <a class="nav-link" onclick="showPage('dashboard')"><i class="fas fa-chart-pie"></i><span> Dashboard</span></a>
+        <a class="nav-link" onclick="showPage('produits')"><i class="fas fa-cube"></i><span> Produits</span></a>
+        <a class="nav-link" onclick="showPage('categories')"><i class="fas fa-tags"></i><span> Catégories</span></a>
+        <a class="nav-link" onclick="showPage('fournisseurs')"><i class="fas fa-truck"></i><span> Fournisseurs</span></a>
+        <a class="nav-link" onclick="showPage('entrees')"><i class="fas fa-arrow-down"></i><span> Entrées stock</span></a>
+        <a class="nav-link" onclick="showPage('sorties')"><i class="fas fa-arrow-up"></i><span> Sorties stock</span></a>
+        <div class="nav-section">Ventes & Facturation</div>
+        <a class="nav-link" onclick="showPage('ventes')"><i class="fas fa-shopping-cart"></i><span> Ventes</span></a>
+        <a class="nav-link" onclick="showPage('pos')"><i class="fas fa-cash-register"></i><span> POS (Vente rapide)</span></a>
+        <a class="nav-link" onclick="showPage('factures')"><i class="fas fa-file-invoice"></i><span> Factures</span></a>
+        <div class="nav-section">Rapports & Analyses</div>
+        <a class="nav-link" onclick="showPage('rapports')"><i class="fas fa-chart-bar"></i><span> Rapports</span></a>
+        <a class="nav-link" onclick="showPage('suggestions')"><i class="fas fa-lightbulb"></i><span> Suggestions</span></a>
+        <a class="nav-link" onclick="showPage('audit')"><i class="fas fa-history"></i><span> Journal d'audit</span></a>
+        
+        <div class="nav-section" id="adminSection" style="display:none;">Administration</div>
+        <a class="nav-link" id="adminUsersLink" onclick="showPage('users')" style="display:none;"><i class="fas fa-users-cog"></i><span> Gestion utilisateurs</span></a>
+        <a class="nav-link" id="adminSettingsLink" onclick="showPage('settings')" style="display:none;"><i class="fas fa-cog"></i><span> ⚙️ Paramètres</span></a>
+        
+        <div class="nav-section" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:10px;">ℹ️ Informations</div>
+        <a class="nav-link" onclick="showPage('about')"><i class="fas fa-info-circle"></i><span> À propos</span></a>
+        
+        <div class="nav-section" style="border-top:1px solid rgba(255,255,255,0.05); padding-top:10px; margin-top:10px;">💾 Gestion des fichiers</div>
+        <a class="nav-link" onclick="sauvegarderDonnees()" style="color:#4caf50; cursor:pointer;"><i class="fas fa-save"></i><span> Sauvegarder</span></a>
+        <a class="nav-link" onclick="chargerDonnees()" style="color:#ff9800; cursor:pointer;"><i class="fas fa-folder-open"></i><span> Charger sauvegarde</span></a>
+        <a class="nav-link" onclick="afficherInfoSauvegarde()" style="color:#2196f3; cursor:pointer;"><i class="fas fa-clock"></i><span> Info sauvegarde</span></a>
+        <a class="nav-link" onclick="exporterToutesDonnees()" style="color:#9c27b0; cursor:pointer;"><i class="fas fa-file-export"></i><span> Exporter toutes les données</span></a>
+        <div id="saveInfoBox" class="save-info-box" style="display:none; margin:5px 15px;"><div id="saveInfoContent"></div></div>
+        
+        <div class="nav-section" style="margin-top:20px; border-top:1px solid rgba(255,255,255,0.05); padding-top:15px;">
+            <a class="nav-link" onclick="logout()" style="color:#c62828;"><i class="fas fa-sign-out-alt"></i><span> Déconnexion</span></a>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="topbar">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <button class="hamburger" onclick="toggleSidebar()" aria-label="Menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h5 class="page-title" id="pageTitle"><i class="fas fa-chart-pie me-2"></i>Dashboard</h5>
+            </div>
+            <div class="user-info">
+                <span class="status-badge" id="userStatusBadge">✅ Actif</span>
+                <span id="userRole" class="badge bg-primary" style="font-size:0.7rem;">Admin</span>
+                <span id="userName" style="font-size:0.85rem; display:inline-block;">Administrateur</span>
+                <div class="avatar" id="userAvatar">A</div>
+                <span class="sync-indicator" id="syncIndicator">
+                    <span class="sync-dot" id="syncDot"></span>
+                    <span id="syncStatus">Synchronisé</span>
+                </span>
+                <span id="onlineStatus" class="sync-badge online">
+                    <i class="fas fa-wifi"></i> En ligne
+                </span>
+            </div>
+        </div>
+        <div class="content" id="pageContent">
+
+            <!-- DASHBOARD -->
+            <div id="page-dashboard">
+                <div class="file-system-info">
+                    <i class="fas fa-folder-open text-primary"></i>
+                    <span><strong>📁 Structure :</strong></span>
+                    <span class="badge-file">config.json</span>
+                    <span class="badge-file">database.db</span>
+                    <span class="badge-file">logs/</span>
+                    <span class="badge-file">backup/</span>
+                    <span class="badge-file">images/</span>
+                    <span class="badge-file">temp/</span>
+                    <span class="badge-file ms-2" style="background:#28a745;" id="fileStatus">✅ Prêt</span>
+                    <span class="badge-file ms-2" style="background:#667eea;" id="dbStatus">🐘 Neon</span>
+                </div>
+                
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-card"><div class="icon purple"><i class="fas fa-cube"></i></div><div class="number" id="statProduits">0</div><div class="label">Total Produits</div></div>
+                    <div class="stat-card"><div class="icon green"><i class="fas fa-box"></i></div><div class="number" id="statStockTotal">0</div><div class="label">Stock Total</div></div>
+                    <div class="stat-card"><div class="icon orange"><i class="fas fa-exclamation-triangle"></i></div><div class="number" id="statAlerte">0</div><div class="label">Alertes Stock</div></div>
+                    <div class="stat-card"><div class="icon red"><i class="fas fa-calendar-times"></i></div><div class="number" id="statPerimes">0</div><div class="label">Produits périmés</div></div>
+                    <div class="stat-card"><div class="icon blue"><i class="fas fa-tags"></i></div><div class="number" id="statCategories">0</div><div class="label">Catégories</div></div>
+                    <div class="stat-card"><div class="icon teal"><i class="fas fa-money-bill-wave"></i></div><div class="number" id="statVentesJour">0 FC</div><div class="label">Ventes aujourd'hui</div></div>
+                </div>
+                <div class="row g-3">
+                    <div class="col-12 col-md-8">
+                        <div class="card"><div class="card-header bg-light">Ventes mensuelles</div><div class="card-body"><div class="chart-container"><canvas id="ventesChart"></canvas></div></div></div>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <div class="card"><div class="card-header bg-light">Produits par catégorie</div><div class="card-body"><div class="chart-container" style="height:250px;"><canvas id="categorieChart"></canvas></div></div></div>
+                    </div>
+                </div>
+                <div class="row g-3 mt-2">
+                    <div class="col-12 col-md-6">
+                        <div class="card"><div class="card-header bg-light"><i class="fas fa-exclamation-triangle text-warning"></i> Alertes stock</div><div class="card-body p-0" id="alertesList"><div class="text-center p-3 text-muted">Aucune alerte</div></div></div>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <div class="card"><div class="card-header bg-light"><i class="fas fa-fire text-danger"></i> Top 5 produits vendus</div><div class="card-body p-0" id="topProduitsList"><div class="text-center p-3 text-muted">Aucune vente</div></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PRODUITS -->
+            <div id="page-produits" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-cube me-2"></i>Liste des produits</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <input type="text" id="searchProduit" placeholder="🔍 Rechercher..." style="padding:4px 10px; border:2px solid #e9ecef; border-radius:8px; font-size:0.8rem; max-width:160px;" oninput="renderProduits()">
+                        <button class="btn-modern primary sm" onclick="openModal('produit')"><i class="fas fa-plus"></i> Nouveau</button>
+                        <button class="btn-modern success sm btn-export-excel" onclick="exporterProduitsExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-modern danger sm btn-export-pdf" onclick="exporterProduitsPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead><tr><th>Code</th><th>Nom</th><th>Catégorie</th><th>Stock</th><th>Seuil</th><th>Péremption</th><th>Statut</th><th>Actions</th></tr></thead>
+                        <tbody id="produitsBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- CATÉGORIES -->
+            <div id="page-categories" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-tags me-2"></i>Liste des catégories</h6>
+                    <button class="btn-modern primary sm" onclick="openModal('categorie')"><i class="fas fa-plus"></i> Nouvelle</button>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead><tr><th>Nom</th><th>Description</th><th>Produits</th><th>Actions</th></tr></thead>
+                        <tbody id="categoriesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- FOURNISSEURS -->
+            <div id="page-fournisseurs" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-truck me-2"></i>Liste des fournisseurs</h6>
+                    <button class="btn-modern primary sm" onclick="openModal('fournisseur')"><i class="fas fa-plus"></i> Nouveau</button>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead><tr><th>Nom</th><th>Contact</th><th>Téléphone</th><th>Email</th><th>Actions</th></tr></thead>
+                        <tbody id="fournisseursBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ENTREES -->
+            <div id="page-entrees" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-arrow-down me-2"></i>Historique des entrées</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn-modern success sm" onclick="openModal('entree')"><i class="fas fa-plus"></i> Nouvelle entrée</button>
+                        <button class="btn-modern danger sm" onclick="viderHistoriqueEntrees()"><i class="fas fa-trash-alt"></i> Vider</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead><tr><th>Produit</th><th>Fournisseur</th><th>Quantité</th><th>Prix unit.</th><th>Total</th><th>Date</th></tr></thead>
+                        <tbody id="entreesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- SORTIES -->
+            <div id="page-sorties" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-arrow-up me-2"></i>Historique des sorties</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button class="btn-modern danger sm" onclick="openModal('sortie')"><i class="fas fa-plus"></i> Nouvelle sortie</button>
+                        <button class="btn-modern danger sm" onclick="viderHistoriqueSorties()"><i class="fas fa-trash-alt"></i> Vider</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead><tr><th>Produit</th><th>Type</th><th>Quantité</th><th>Motif</th><th>Date</th></tr></thead>
+                        <tbody id="sortiesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VENTES -->
+            <div id="page-ventes" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-shopping-cart me-2"></i>Liste des ventes</h6>
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <input type="text" id="searchVente" placeholder="🔍 Rechercher..." style="padding:4px 10px; border:2px solid #e9ecef; border-radius:8px; font-size:0.8rem; max-width:150px;" oninput="renderVentes()">
+                        <a href="#" onclick="showPage('pos')" class="btn-modern primary sm"><i class="fas fa-cash-register"></i> Nouvelle</a>
+                        <button class="btn-modern success sm btn-export-excel" onclick="exporterVentesExcel()"><i class="fas fa-file-excel"></i> Excel</button>
+                        <button class="btn-modern danger sm btn-export-pdf" onclick="exporterVentesPDF()"><i class="fas fa-file-pdf"></i> PDF</button>
+                        <button class="btn-modern danger sm" onclick="supprimerVentesSelectionnees()" id="btnSupprimerSelection" style="display:none;">
+                            <i class="fas fa-trash"></i> (<span id="nbSelection">0</span>)
+                        </button>
+                        <button class="btn-modern warning sm" onclick="selectAllVentes()"><i class="fas fa-check-double"></i> Tous</button>
+                        <button class="btn-modern secondary sm" onclick="deselectAllVentes()"><i class="fas fa-times"></i> Annuler</button>
+                        <button class="btn-modern info sm" onclick="rafraichirVentes()" title="Rafraîchir les ventes">
+    <i class="fas fa-sync"></i> Rafraîchir
+</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width:35px;"><input type="checkbox" id="selectAllVentes" onchange="toggleAllVentes()" class="select-checkbox"></th>
+                                <th>N° Facture</th>
+                                <th>Client</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ventesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- POS -->
+            <div id="page-pos" style="display:none;">
+                <h6 style="font-size:0.95rem;"><i class="fas fa-cash-register me-2"></i>Point de vente (POS)</h6>
+                <div class="row g-3">
+                    <div class="col-12 col-lg-7">
+                        <div class="pos-container">
+                            <div class="row g-2">
+                                <div class="col-8"><input type="text" id="posSearch" class="form-control" placeholder="🔍 Rechercher..." oninput="searchPosProduits()" style="font-size:0.85rem;"></div>
+                                <div class="col-4"><select id="posCategorie" class="form-control" onchange="searchPosProduits()" style="font-size:0.85rem;"><option value="">Toutes</option></select></div>
+                            </div>
+                            <div class="row g-2 mt-2" id="posProduitsList"><div class="col-12 text-center text-muted p-3">Chargement...</div></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
+                        <div class="pos-container">
+                            <h6 style="font-size:0.95rem;">🛒 Panier</h6>
+                            <div id="posCart"><div class="text-center text-muted">Panier vide</div></div>
+                            <hr>
+                            <div class="d-flex justify-content-between"><strong>Total :</strong><strong id="posTotal">0 FC</strong></div>
+                            <div class="mt-2"><input type="text" id="posClient" class="form-control" placeholder="Nom du client (optionnel)" style="font-size:0.85rem;"></div>
+                            <button class="btn-modern success w-100 mt-2" onclick="validerVente()"><i class="fas fa-check"></i> Valider la vente</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FACTURES -->
+            <div id="page-factures" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-file-invoice me-2"></i>Factures</h6>
+                    <div>
+                        <span class="badge bg-primary" id="factureTotal">Total: 0</span>
+                        <span class="badge bg-success" id="facturePayees">Payées: 0</span>
+                        <span class="badge bg-warning" id="factureImpayees">Impayées: 0</span>
+                    </div>
+                </div>
+                
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <button class="btn-modern info sm" onclick="voirDetailFactureSelectionnee()" id="btnDetailFacture" disabled>
+                        <i class="fas fa-eye"></i> Détail
+                    </button>
+                    <button class="btn-modern primary sm" onclick="modifierFactureSelectionnee()" id="btnModifierFacture" disabled>
+                        <i class="fas fa-edit"></i> Modifier
+                    </button>
+                    <button class="btn-modern danger sm" onclick="supprimerFactureSelectionnee()" id="btnSupprimerFacture" style="display:none;">
+                        <i class="fas fa-trash"></i> (<span id="nbFactureSelection">0</span>)
+                    </button>
+                    <button class="btn-modern danger sm btn-export-pdf" onclick="exporterFacturePDFSelectionnee()" id="btnPDFFacture" disabled>
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                    <button class="btn-modern success sm" onclick="imprimerFactureSelectionnee()" id="btnImprimerFacture" disabled>
+                        <i class="fas fa-print"></i> Imprimer
+                    </button>
+                    <button class="btn-modern info sm ms-2" onclick="rafraichirFactures()" title="Rafraîchir les factures">
+    <i class="fas fa-sync"></i> Rafraîchir
+</button>
+                    <button class="btn-modern warning sm" onclick="selectAllFactures()"><i class="fas fa-check-double"></i> Tous</button>
+                    <button class="btn-modern secondary sm" onclick="deselectAllFactures()"><i class="fas fa-times"></i> Annuler</button>
+                </div>
+                
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width:35px;"><input type="checkbox" id="selectAllFactures" onchange="toggleAllFactures()" class="select-checkbox"></th>
+                                <th>N° Facture</th>
+                                <th>Client</th>
+                                <th>Date</th>
+                                <th>Total</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody id="facturesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- RAPPORTS -->
+            <div id="page-rapports" style="display:none;">
+                <h6 style="font-size:0.95rem;"><i class="fas fa-chart-bar me-2"></i>Génération de rapports</h6>
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-12 col-md-3">
+                                <label style="font-size:0.8rem; font-weight:600;">Type</label>
+                                <select id="rapportType" class="form-control" onchange="genererRapport()" style="font-size:0.85rem;">
+                                    <option value="journalier">Journalier</option>
+                                    <option value="hebdomadaire">Hebdomadaire</option>
+                                    <option value="mensuel">Mensuel</option>
+                                    <option value="personnalise">Personnalisé</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-3" id="rapportDateDebut" style="display:none;">
+                                <label style="font-size:0.8rem; font-weight:600;">Date début</label>
+                                <input type="date" id="rapportDateStart" class="form-control" onchange="genererRapport()" style="font-size:0.85rem;">
+                            </div>
+                            <div class="col-12 col-md-3" id="rapportDateFin" style="display:none;">
+                                <label style="font-size:0.8rem; font-weight:600;">Date fin</label>
+                                <input type="date" id="rapportDateEnd" class="form-control" onchange="genererRapport()" style="font-size:0.85rem;">
+                            </div>
+                            <div class="col-12 col-md-3 d-flex align-items-end gap-2 flex-wrap">
+                                <button class="btn-modern primary" onclick="genererRapport()" style="font-size:0.8rem;"><i class="fas fa-sync"></i> Générer</button>
+                                <button class="btn-modern success" onclick="exporterRapportExcel()" style="font-size:0.8rem;"><i class="fas fa-file-excel"></i> Exporter</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="rapportResultats"></div>
+            </div>
+
+            <!-- SUGGESTIONS -->
+            <div id="page-suggestions" style="display:none;">
+                <h6 style="font-size:0.95rem;"><i class="fas fa-lightbulb me-2"></i>Suggestions intelligentes</h6>
+                <div class="row g-3">
+                    <div class="col-12 col-md-6"><div class="card"><div class="card-header bg-light"><i class="fas fa-fire text-warning"></i> Produits les plus vendus</div><div class="card-body p-0" id="suggestionsTopVentes"></div></div></div>
+                    <div class="col-12 col-md-6"><div class="card"><div class="card-header bg-light"><i class="fas fa-hourglass-half text-info"></i> Produits à faible rotation</div><div class="card-body p-0" id="suggestionsFaibleRotation"></div></div></div>
+                    <div class="col-12 col-md-6"><div class="card"><div class="card-header bg-light"><i class="fas fa-calendar-check text-success"></i> Périodes de forte demande</div><div class="card-body p-0" id="suggestionsPeriodes"></div></div></div>
+                    <div class="col-12 col-md-6"><div class="card"><div class="card-header bg-light"><i class="fas fa-exclamation-triangle text-danger"></i> Recommandations</div><div class="card-body p-0" id="suggestionsRecommandations"></div></div></div>
+                </div>
+            </div>
+
+            <!-- AUDIT -->
+            <div id="page-audit" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-history me-2"></i>Journal d'audit</h6>
+                    <button class="btn-modern danger sm" onclick="viderJournalAudit()"><i class="fas fa-trash-alt"></i> Vider</button>
+                </div>
+                <div id="auditStats" class="mb-2">
+                    <span class="badge bg-primary">Total: <span id="auditTotal">0</span></span>
+                    <span class="badge bg-success ms-1">Dernière: <span id="auditDernier">-</span></span>
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead><tr><th>Date & Heure</th><th>Utilisateur</th><th>Action</th><th>Détails</th></tr></thead>
+                        <tbody id="auditBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- UTILISATEURS -->
+            <div id="page-users" style="display:none;">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <h6 style="margin:0; font-size:0.95rem;"><i class="fas fa-users-cog me-2"></i>Gestion des utilisateurs</h6>
+                    <div>
+                        <span class="badge bg-primary" id="statsUsers">Total: 0</span>
+                        <span class="badge bg-success" id="statsActive">Actifs: 0</span>
+                        <span class="badge bg-warning" id="statsPending">En attente: 0</span>
+                        <span class="badge bg-danger" id="statsInactive">Inactifs: 0</span>
+                    </div>
+                </div>
+                <div class="alert alert-info" style="font-size:0.85rem;">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Gestion :</strong> Sélectionnez un rôle ou un statut pour modifier.
+                </div>
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th><th>Nom</th><th>Email</th>
+                                <th style="min-width:120px;">Rôle</th>
+                                <th style="min-width:120px;">Statut</th>
+                                <th>Date</th>
+                                <th style="min-width:140px;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- PARAMÈTRES -->
+            <div id="page-settings" style="display:none;">
+                <h6 style="font-size:0.95rem;"><i class="fas fa-cog me-2"></i>Paramètres de l'application</h6>
+                
+                <div class="settings-card">
+                    <div class="settings-title"><i class="fas fa-sliders-h"></i> Paramètres généraux</div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-building me-1"></i> Nom de l'entreprise</label>
+                                <input type="text" id="settingsCompanyName" class="form-control" placeholder="FreshStock SARL">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-globe me-1"></i> Devise</label>
+                                <select id="settingsCurrency" class="form-control">
+                                    <option value="FC">Franc Congolais (FC)</option>
+                                    <option value="USD">Dollar US (USD)</option>
+                                    <option value="EUR">Euro (EUR)</option>
+                                    <option value="CFA">Franc CFA (FCFA)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-percent me-1"></i> Taux de TVA (%)</label>
+                                <input type="number" id="settingsTaxRate" class="form-control" placeholder="16" min="0" max="100">
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-calendar me-1"></i> Format de date</label>
+                                <select id="settingsDateFormat" class="form-control">
+                                    <option value="fr">DD/MM/YYYY</option>
+                                    <option value="en">MM/DD/YYYY</option>
+                                    <option value="iso">YYYY-MM-DD</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-title"><i class="fas fa-user-shield"></i> Gestion des utilisateurs</div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-user-plus me-1"></i> Rôle par défaut</label>
+                                <select id="settingsDefaultRole" class="form-control">
+                                    <option value="magasinier">📦 Magasinier</option>
+                                    <option value="caissier">💰 Caissier</option>
+                                    <option value="manager">📊 Manager</option>
+                                    <option value="admin">👑 Admin</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-clock me-1"></i> Session (minutes)</label>
+                                <input type="number" id="settingsSessionTimeout" class="form-control" placeholder="30" min="5" max="480">
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="settingsRequire2FA">
+                                <label class="form-check-label" for="settingsRequire2FA">
+                                    <i class="fas fa-shield-alt me-1"></i> 2FA pour les admins
+                                </label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="settingsForcePasswordChange">
+                                <label class="form-check-label" for="settingsForcePasswordChange">
+                                    <i class="fas fa-sync-alt me-1"></i> Changer mot de passe tous les 90 jours
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-title"><i class="fas fa-bell"></i> Notifications</div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="settingsStockAlerts" checked>
+                                <label class="form-check-label" for="settingsStockAlerts"><i class="fas fa-exclamation-triangle text-warning me-1"></i> Alertes stock bas</label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="settingsExpiryAlerts" checked>
+                                <label class="form-check-label" for="settingsExpiryAlerts"><i class="fas fa-calendar-times text-danger me-1"></i> Alertes péremption</label>
+                            </div>
+                            <div class="form-check mt-2">
+                                <input class="form-check-input" type="checkbox" id="settingsDailyReports">
+                                <label class="form-check-label" for="settingsDailyReports"><i class="fas fa-file-alt me-1"></i> Rapport quotidien</label>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="settingsAutoBackup" checked>
+                                <label class="form-check-label" for="settingsAutoBackup"><i class="fas fa-save me-1"></i> Sauvegarde auto</label>
+                            </div>
+                            <div class="form-group mt-2">
+                                <label><i class="fas fa-clock me-1"></i> Fréquence (heures)</label>
+                                <input type="number" id="settingsBackupInterval" class="form-control" placeholder="1" min="1" max="24">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <div class="settings-title"><i class="fas fa-palette"></i> Apparence</div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-moon me-1"></i> Thème</label>
+                                <select id="settingsTheme" class="form-control" onchange="appliquerThemeInstant(this.value)">
+                                    <option value="light">☀️ Clair</option>
+                                    <option value="dark">🌙 Sombre</option>
+                                    <option value="auto">🔄 Automatique</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <div class="form-group">
+                                <label><i class="fas fa-font me-1"></i> Taille de police</label>
+                                <select id="settingsFontSize" class="form-control" onchange="appliquerTaillePoliceInstant(this.value)">
+                                    <option value="small">Petite</option>
+                                    <option value="medium" selected>Moyenne</option>
+                                    <option value="large">Grande</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button class="btn-modern primary" onclick="sauvegarderParametres()"><i class="fas fa-save"></i> Enregistrer</button>
+                    <button class="btn-modern secondary" onclick="reinitialiserParametres()"><i class="fas fa-undo"></i> Réinitialiser</button>
+                    <button class="btn-modern info" onclick="exporterParametres()"><i class="fas fa-file-export"></i> Exporter</button>
+                </div>
+            </div>
+
+            <!-- ABOUT -->
+            <div id="page-about" style="display:none;">
+                <div class="about-card">
+                    <div class="about-icon"><i class="fas fa-boxes"></i></div>
+                    <h2>FreshStock ERP</h2>
+                    <p class="version">Version <span id="appVersion">1.2.0</span></p>
+                    <div class="about-divider"></div>
+                    <p style="color:#6b7a8f; max-width:500px; margin:0 auto 15px; font-size:0.9rem;">
+                        Solution de gestion d'entrepôt et de point de vente conçue pour simplifier la gestion de votre stock, 
+                        vos ventes et vos factures au quotidien.
+                    </p>
+                    <div class="info-grid">
+                        <div class="info-item"><div class="label">📦 Produits</div><div class="value" id="aboutProduits">0</div></div>
+                        <div class="info-item"><div class="label">💰 Ventes</div><div class="value" id="aboutVentes">0</div></div>
+                        <div class="info-item"><div class="label">👤 Utilisateurs</div><div class="value" id="aboutUsers">0</div></div>
+                        <div class="info-item"><div class="label">📁 Fichiers</div><div class="value">6 dossiers</div></div>
+                    </div>
+                    <div class="developer">
+                        <i class="fas fa-code me-2"></i>
+                        Développé par <strong>Angi.inc</strong>
+                        <br><small style="color:#aab;">© 2026 Tous droits réservés</small>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-sim" id="modalSim">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 id="modalTitle">Nouveau produit</h5>
+            <button class="close" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="modalBody"></div>
+    </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div class="toast-notification" id="toast">
+    <span class="toast-icon" id="toastIcon">✅</span>
+    <span id="toastMessage">Action effectuée avec succès !</span>
+    <button class="toast-close" onclick="fermerToast()">&times;</button>
+</div>
+
+<!-- ===== JAVASCRIPT ===== -->
+<script src="app.js"></script>
+</body>
+</html>
