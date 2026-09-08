@@ -56,7 +56,11 @@ export async function fetchAuditLogs() {
 }
 
 export async function fetchProfileByEmail(email: string) {
-  const { data, error } = await supabase.from('utilisateurs').select('*').eq('email', email).maybeSingle()
+  const { data, error } = await supabase
+    .from('utilisateurs')
+    .select('*')
+    .ilike('email', email)
+    .maybeSingle()
   if (error) throw error
   return data as Utilisateur | null
 }

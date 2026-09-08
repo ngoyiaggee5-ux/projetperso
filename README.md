@@ -42,17 +42,38 @@ VITE_SUPABASE_URL=https://votre-projet.supabase.co
 VITE_SUPABASE_ANON_KEY=votre_cle_anon
 ```
 
+## Connexion / Auth Supabase
+
+La v2 utilise **Supabase Auth** (pas `mot_de_passe` de la table).
+
+### Étapes (dans l'ordre)
+
+1. Exécuter `supabase/migration.sql` (RLS + policies)
+2. **Dashboard → Authentication → Users → Add user**
+   - Email identique à `utilisateurs` (ex. `admin@freshstock.com`)
+   - Nouveau mot de passe (pas l'ancien `admin123`)
+   - Cocher **Auto Confirm User**
+3. Exécuter `supabase/setup-auth.sql` (lie `auth_id`, active les comptes, corrige RLS)
+4. Se connecter avec le mot de passe **Supabase Auth**
+
+### Erreurs courantes
+
+| Message | Solution |
+|---------|----------|
+| Identifiants incorrects | Créer le user dans Authentication (étape 2) |
+| Compte en attente | `UPDATE utilisateurs SET statut = 'active' WHERE email = '...'` |
+| Profil bloqué RLS | Exécuter `setup-auth.sql` |
+
 ## Migration depuis v1 (legacy)
 
 L'ancienne version est dans `legacy/` (HTML + JS vanilla).
 
 ### Étapes Supabase
 
-1. Exécuter `supabase/migration.sql` dans l'éditeur SQL Supabase
-2. Créer les comptes Auth pour vos utilisateurs existants (Dashboard > Authentication)
-3. Lier chaque user : `UPDATE utilisateurs SET auth_id = '...' WHERE email = '...'`
-4. Activer le compte : `UPDATE utilisateurs SET statut = 'active' WHERE email = '...'`
-5. Supprimer `mot_de_passe` une fois tous les users migrés
+1. Exécuter `supabase/migration.sql`
+2. Créer les comptes dans **Authentication → Users**
+3. Exécuter `supabase/setup-auth.sql`
+4. Supprimer `mot_de_passe` une fois tous les users migrés
 
 ### Pages migrées
 

@@ -15,10 +15,13 @@ export function useAppData() {
   const utilisateurs = useQuery({ queryKey: ['utilisateurs'], queryFn: fetchUtilisateurs })
   const auditLogs = useQuery({ queryKey: ['audit_logs'], queryFn: fetchAuditLogs })
 
-  const isLoading = [
-    produits, categories, fournisseurs, entrees, sorties,
-    ventes, detailsVentes, utilisateurs, auditLogs,
-  ].some((q) => q.isLoading)
+  const queries = [produits, categories, fournisseurs, entrees, sorties, ventes, detailsVentes, utilisateurs, auditLogs]
+
+  const isLoading = queries.some((q) => q.isLoading)
+  const isError = queries.some((q) => q.isError)
+  const errorMessage = queries.find((q) => q.error)?.error instanceof Error
+    ? (queries.find((q) => q.error)?.error as Error).message
+    : 'Erreur de chargement'
 
   return {
     produits: produits.data ?? [],
@@ -31,10 +34,8 @@ export function useAppData() {
     utilisateurs: utilisateurs.data ?? [],
     auditLogs: auditLogs.data ?? [],
     isLoading,
-    refetchAll: () => Promise.all([
-      produits.refetch(), categories.refetch(), fournisseurs.refetch(),
-      entrees.refetch(), sorties.refetch(), ventes.refetch(),
-      detailsVentes.refetch(), utilisateurs.refetch(), auditLogs.refetch(),
-    ]),
+    isError,
+    errorMessage,
+    refetchAll: () => Promise.all(queries.map((q) => q.refetch())),
   }
 }

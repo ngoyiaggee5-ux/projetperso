@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
+import { mapAuthError, mapProfileError } from '@/lib/auth-errors'
 import { supabase } from '@/lib/supabase'
-import { addAuditLog, createUtilisateurProfile, fetchProfileByEmail } from '@/services/api'
+import { addAuditLog, createUtilisateurProfile, fetchProfileByEmail, updateUtilisateur } from '@/services/api'
 import type { AuthProfile, UserRole } from '@/types'
 import { ADMIN_PAGES, HIDDEN_PAGES } from '@/types'
 
@@ -32,6 +33,8 @@ async function loadProfile(session: Session): Promise<AuthProfile | null> {
       auth_id: session.user.id,
       date_creation: new Date().toISOString(),
     })
+  } else if (!profile.auth_id) {
+    profile = await updateUtilisateur(profile.id, { auth_id: session.user.id })
   }
 
   return { ...profile, sessionEmail: email }
@@ -73,56 +76,98 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) return { error: 'Email ou mot de passe incorrect.' }
+    const normalizedEmail = email.trim().toLowerCase()
 
-    const userProfile = await fetchProfileByEmail(email)
-    if (!userProfile) return { error: 'Profil utilisateur introuvable.' }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    })
+    if (error) return { error: mapAuthError(error) }
+
+    let userProfile: AuthProfile | null = null
+    try {
+      let profile = await fetchProfileByEmail(normalizedEmail)
+      if (!profile) {
+        return {
+          error:
+            'Compte Auth OK, mais aucun profil dans la table utilisateurs. ' +
+            'Exécutez supabase/setup-auth.sql ou inscrivez-vous via l\'application.',
+        }
+      }
+
+      if (!profile.auth_id && data.user) {
+        profile = await updateUtilisateur(profile.id, { auth_id: data.user.id })
+      }
+
+      userProfile = { ...profile, sessionEmail: normalizedEmail }
+    } catch (err) {
+      await supabase.auth.signOut()
+      return { error: mapProfileError(err) }
+    }
+
     if (userProfile.statut === 'inactive') {
       await supabase.auth.signOut()
-      return { error: 'Votre compte est désactivé.' }
+      return { error: 'Votre compte est désactivé. Contactez un administrateur.' }
     }
     if (userProfile.statut === 'pending') {
       await supabase.auth.signOut()
-      return { error: 'Votre compte est en attente d\'activation.' }
+      return {
+        error:
+          'Votre compte est en attente d\'activation. ' +
+          'Un admin doit exécuter : UPDATE utilisateurs SET statut = \'active\' WHERE email = \'...\';',
+      }
     }
 
-    setProfile({ ...userProfile, sessionEmail: email })
-    await addAuditLog({
-      utilisateur: email,
-      action: 'Connexion',
-      details: `Login réussi - Rôle: ${userProfile.role}`,
-    })
+    setProfile(userProfile)
+    try {
+      await addAuditLog({
+        utilisateur: normalizedEmail,
+        action: 'Connexion',
+        details: `Login réussi - Rôle: ${userProfile.role}`,
+      })
+    } catch {
+      // audit non bloquant
+    }
 
     if (data.session) setSession(data.session)
     return {}
   }
 
   const signUp = async (nom: string, email: string, password: string) => {
-    const existing = await fetchProfileByEmail(email)
-    if (existing) return { error: 'Cet email est déjà utilisé.' }
+    const normalizedEmail = email.trim().toLowerCase()
+
+    try {
+      const existing = await fetchProfileByEmail(normalizedEmail)
+      if (existing) return { error: 'Cet email est déjà utilisé.' }
+    } catch {
+      // continue — profil peut être inaccessible avant auth
+    }
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: { data: { nom } },
     })
-    if (error) return { error: error.message }
+    if (error) return { error: mapAuthError(error) }
 
     if (data.user) {
-      await createUtilisateurProfile({
-        nom,
-        email,
-        role: 'magasinier',
-        statut: 'pending',
-        auth_id: data.user.id,
-        date_creation: new Date().toISOString(),
-      })
-      await addAuditLog({
-        utilisateur: email,
-        action: 'Inscription',
-        details: 'Nouvel utilisateur inscrit - En attente',
-      })
+      try {
+        await createUtilisateurProfile({
+          nom,
+          email: normalizedEmail,
+          role: 'magasinier',
+          statut: 'pending',
+          auth_id: data.user.id,
+          date_creation: new Date().toISOString(),
+        })
+        await addAuditLog({
+          utilisateur: normalizedEmail,
+          action: 'Inscription',
+          details: 'Nouvel utilisateur inscrit - En attente',
+        })
+      } catch (err) {
+        return { error: mapProfileError(err) }
+      }
     }
 
     await supabase.auth.signOut()
@@ -131,11 +176,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     if (profile) {
-      await addAuditLog({
-        utilisateur: profile.email,
-        action: 'Déconnexion',
-        details: 'Logout',
-      })
+      try {
+        await addAuditLog({
+          utilisateur: profile.email,
+          action: 'Déconnexion',
+          details: 'Logout',
+        })
+      } catch {
+        // audit non bloquant
+      }
     }
     await supabase.auth.signOut()
     setSession(null)

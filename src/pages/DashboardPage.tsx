@@ -1,28 +1,32 @@
 import { AlertTriangle, Boxes, CalendarX, DollarSign, Package, Tags } from '@/components/ui/Icons'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
+import { DataError } from '@/components/DataError'
 import { useAppData } from '@/hooks/useAppData'
 import { formatCurrency } from '@/lib/utils'
 
 const COLORS = ['#667eea', '#2e7d32', '#f57c00', '#c62828', '#1a73e8', '#00695c']
 
 export function DashboardPage() {
-  const { produits, categories, ventes, detailsVentes, isLoading } = useAppData()
+  const { produits, categories, ventes, detailsVentes, isLoading, isError, errorMessage, refetchAll } = useAppData()
 
   if (isLoading) return <LoadingScreen />
+  if (isError) return <DataError message={errorMessage} onRetry={() => void refetchAll()} />
 
-  const stockTotal = produits.reduce((sum, p) => sum + p.quantite_stock, 0)
-  const alertes = produits.filter((p) => p.quantite_stock <= p.seuil_alerte)
+  const stockTotal = produits.reduce((sum, p) => sum + (p.quantite_stock ?? 0), 0)
+  const alertes = produits.filter((p) => (p.quantite_stock ?? 0) <= (p.seuil_alerte ?? 0))
   const perimes = produits.filter((p) => p.date_peremption && new Date(p.date_peremption) < new Date())
-  const ventesJour = ventes.filter((v) => new Date(v.date_vente).toDateString() === new Date().toDateString())
-  const caJour = ventesJour.reduce((sum, v) => sum + v.montant_total, 0)
+  const ventesJour = ventes.filter((v) => v.date_vente && new Date(v.date_vente).toDateString() === new Date().toDateString())
+  const caJour = ventesJour.reduce((sum, v) => sum + (v.montant_total ?? 0), 0)
 
   const ventesParMois = Array.from({ length: 6 }, (_, i) => {
     const d = new Date()
     d.setMonth(d.getMonth() - (5 - i))
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
     const label = d.toLocaleDateString('fr-FR', { month: 'short' })
-    const total = ventes.filter((v) => v.date_vente.startsWith(key)).reduce((sum, v) => sum + v.montant_total, 0)
+    const total = ventes
+      .filter((v) => v.date_vente?.startsWith(key))
+      .reduce((sum, v) => sum + (v.montant_total ?? 0), 0)
     return { name: label, total }
   })
   const maxVente = Math.max(...ventesParMois.map((v) => v.total), 1)
@@ -33,7 +37,7 @@ export function DashboardPage() {
   })).filter((c) => c.value > 0)
 
   const topProduits = detailsVentes.reduce<Record<number, number>>((acc, d) => {
-    acc[d.produit_id] = (acc[d.produit_id] ?? 0) + d.quantite
+    acc[d.produit_id] = (acc[d.produit_id] ?? 0) + (d.quantite ?? 0)
     return acc
   }, {})
   const top5 = Object.entries(topProduits).sort(([, a], [, b]) => b - a).slice(0, 5).map(([id, qty]) => ({
