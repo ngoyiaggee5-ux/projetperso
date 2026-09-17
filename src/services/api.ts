@@ -79,7 +79,8 @@ export async function fetchProfileByAuthId(authId: string) {
 export async function fetchMyProfile(): Promise<Utilisateur | null> {
   const { data: rpcData, error: rpcError } = await supabase.rpc('get_my_profile')
   if (!rpcError && rpcData) {
-    return rpcData as Utilisateur
+    const row = typeof rpcData === 'string' ? (JSON.parse(rpcData) as Utilisateur) : (rpcData as Utilisateur)
+    return row
   }
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -155,4 +156,70 @@ export async function addAuditLog(log: Omit<AuditLog, 'id' | 'date_action'>) {
     date_action: new Date().toISOString(),
   }])
   if (error) throw error
+}
+
+export async function createEntreeWithStock(input: {
+  produit_id: number
+  fournisseur_id?: number | null
+  quantite: number
+  prix_unitaire: number
+}) {
+  const produit = await supabase.from('produits').select('quantite_stock').eq('id', input.produit_id).single()
+  if (produit.error) throw produit.error
+
+  const nouveauStock = (produit.data.quantite_stock ?? 0) + input.quantite
+  const { error: stockError } = await supabase
+    .from('produits')
+    .update({ quantite_stock: nouveauStock })
+    .eq('id', input.produit_id)
+  if (stockError) throw stockError
+
+  const { data, error } = await supabase
+    .from('entrees')
+    .insert([{
+      produit_id: input.produit_id,
+      fournisseur_id: input.fournisseur_id ?? null,
+      quantite: input.quantite,
+      prix_unitaire: input.prix_unitaire,
+      date_entree: new Date().toISOString(),
+    }])
+    .select()
+    .single()
+  if (error) throw error
+  return data as Entree
+}
+
+export async function createSortieWithStock(input: {
+  produit_id: number
+  type_sortie: string
+  quantite: number
+  motif?: string | null
+}) {
+  const produit = await supabase.from('produits').select('quantite_stock').eq('id', input.produit_id).single()
+  if (produit.error) throw produit.error
+
+  const stockActuel = produit.data.quantite_stock ?? 0
+  if (stockActuel < input.quantite) {
+    throw new Error(`Stock insuffisant (disponible: ${stockActuel})`)
+  }
+
+  const { error: stockError } = await supabase
+    .from('produits')
+    .update({ quantite_stock: stockActuel - input.quantite })
+    .eq('id', input.produit_id)
+  if (stockError) throw stockError
+
+  const { data, error } = await supabase
+    .from('sorties')
+    .insert([{
+      produit_id: input.produit_id,
+      type_sortie: input.type_sortie,
+      quantite: input.quantite,
+      motif: input.motif ?? null,
+      date_sortie: new Date().toISOString(),
+    }])
+    .select()
+    .single()
+  if (error) throw error
+  return data as Sortie
 }

@@ -20,21 +20,18 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 async function loadProfile(session: Session): Promise<AuthProfile | null> {
-  const email = session.user.email
+  const email = session.user.email?.trim().toLowerCase()
   if (!email) return null
 
   let profile = await fetchMyProfile()
-  if (!profile) {
-    profile = await createUtilisateurProfile({
-      nom: session.user.user_metadata?.nom ?? email.split('@')[0],
-      email: email.trim().toLowerCase(),
-      role: 'magasinier',
-      statut: 'pending',
-      auth_id: session.user.id,
-      date_creation: new Date().toISOString(),
-    })
-  } else if (!profile.auth_id) {
+  if (!profile) return null
+
+  if (!profile.auth_id) {
     profile = await updateUtilisateur(profile.id, { auth_id: session.user.id })
+  }
+
+  if (profile.statut === 'inactive' || profile.statut === 'pending') {
+    return null
   }
 
   return { ...profile, sessionEmail: email }
@@ -47,26 +44,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
-      setSession(data.session)
       if (data.session) {
         try {
-          setProfile(await loadProfile(data.session))
+          const loaded = await loadProfile(data.session)
+          if (!loaded) {
+            await supabase.auth.signOut()
+            setSession(null)
+            setProfile(null)
+          } else {
+            setSession(data.session)
+            setProfile(loaded)
+          }
         } catch {
+          await supabase.auth.signOut()
+          setSession(null)
           setProfile(null)
         }
+      } else {
+        setSession(null)
       }
       setLoading(false)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
-      setSession(nextSession)
       if (nextSession) {
         try {
-          setProfile(await loadProfile(nextSession))
+          const loaded = await loadProfile(nextSession)
+          if (!loaded) {
+            await supabase.auth.signOut()
+            setSession(null)
+            setProfile(null)
+          } else {
+            setSession(nextSession)
+            setProfile(loaded)
+          }
         } catch {
+          await supabase.auth.signOut()
+          setSession(null)
           setProfile(null)
         }
       } else {
+        setSession(null)
         setProfile(null)
       }
       setLoading(false)

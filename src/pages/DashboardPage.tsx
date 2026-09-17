@@ -8,7 +8,7 @@ import { formatCurrency } from '@/lib/utils'
 const COLORS = ['#667eea', '#2e7d32', '#f57c00', '#c62828', '#1a73e8', '#00695c']
 
 export function DashboardPage() {
-  const { produits, categories, ventes, detailsVentes, isLoading, isError, errorMessage, refetchAll } = useAppData()
+  const { produits, categories, ventes, detailsVentes, isLoading, isError, errorMessage, refetchAll } = useAppData('dashboard')
 
   if (isLoading) return <LoadingScreen />
   if (isError) return <DataError message={errorMessage} onRetry={() => void refetchAll()} />

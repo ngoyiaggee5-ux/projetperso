@@ -11,7 +11,7 @@ import { createCategorie, deleteCategorie } from '@/services/api'
 
 export function CategoriesPage() {
   const queryClient = useQueryClient()
-  const { categories, produits, isLoading } = useAppData()
+  const { categories, produits, isLoading } = useAppData('categories')
   const [modalOpen, setModalOpen] = useState(false)
   const [nom, setNom] = useState('')
   const [description, setDescription] = useState('')

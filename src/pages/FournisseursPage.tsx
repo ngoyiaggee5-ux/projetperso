@@ -11,7 +11,7 @@ import { createFournisseur, deleteFournisseur } from '@/services/api'
 
 export function FournisseursPage() {
   const queryClient = useQueryClient()
-  const { fournisseurs, isLoading } = useAppData()
+  const { fournisseurs, isLoading } = useAppData('fournisseurs')
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ nom: '', contact: '', telephone: '', email: '' })
 

@@ -84,7 +84,8 @@ L'ancienne version est dans `legacy/` (HTML + JS vanilla).
 | Produits | ✅ CRUD complet |
 | Catégories | ✅ CRUD |
 | Fournisseurs | ✅ CRUD |
-| Entrées, Sorties, Ventes, POS, Factures | 🚧 À migrer |
+| Entrées, Sorties stock | ✅ |
+| Ventes, POS, Factures | 🚧 À migrer |
 | Rapports, Suggestions, Audit | 🚧 À migrer |
 | Utilisateurs, Paramètres | 🚧 À migrer |
 

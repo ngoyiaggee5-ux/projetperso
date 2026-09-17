@@ -1,4 +1,9 @@
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/Button'
+
 export function ProfileMissing() {
+  const { signOut } = useAuth()
+
   return (
     <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
       <h2 className="mb-2 text-lg font-bold text-amber-900">Profil utilisateur introuvable</h2>
@@ -11,9 +16,10 @@ export function ProfileMissing() {
         <li>Vérifiez le résultat en bas : <code>auth_id</code> rempli et <code>statut = active</code></li>
         <li>Déconnectez-vous puis reconnectez-vous</li>
       </ol>
-      <p className="text-xs text-amber-700">
+      <p className="mb-4 text-xs text-amber-700">
         L'email dans Authentication doit être <strong>identique</strong> à celui dans la table utilisateurs.
       </p>
+      <Button variant="secondary" onClick={() => void signOut()}>Se déconnecter</Button>
     </div>
   )
 }

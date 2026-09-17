@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { FormGroup, Input, Label, Select, Textarea } from '@/components/ui/Form'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
+import { DataError } from '@/components/DataError'
 import { useAppData } from '@/hooks/useAppData'
 import { createProduit, deleteProduit, updateProduit } from '@/services/api'
 import type { Produit } from '@/types'
@@ -17,7 +18,7 @@ import { formatDate } from '@/lib/utils'
 
 export function ProduitsPage() {
   const queryClient = useQueryClient()
-  const { produits, categories, fournisseurs, isLoading } = useAppData()
+  const { produits, categories, fournisseurs, isLoading, isError, errorMessage, refetchAll } = useAppData('produits')
   const [search, setSearch] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing] = useState<Produit | null>(null)
@@ -119,6 +120,7 @@ export function ProduitsPage() {
   }
 
   if (isLoading) return <LoadingScreen />
+  if (isError) return <DataError message={errorMessage} onRetry={() => void refetchAll()} />
 
   return (
     <div className="space-y-4">

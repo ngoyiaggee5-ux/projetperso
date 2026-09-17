@@ -6,6 +6,8 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { ProduitsPage } from '@/pages/ProduitsPage'
 import { CategoriesPage } from '@/pages/CategoriesPage'
 import { FournisseursPage } from '@/pages/FournisseursPage'
+import { EntreesPage } from '@/pages/EntreesPage'
+import { SortiesPage } from '@/pages/SortiesPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -32,8 +34,8 @@ export default function App() {
         <Route path="/produits" element={<ProtectedRoute page="produits"><ProduitsPage /></ProtectedRoute>} />
         <Route path="/categories" element={<ProtectedRoute page="categories"><CategoriesPage /></ProtectedRoute>} />
         <Route path="/fournisseurs" element={<ProtectedRoute page="fournisseurs"><FournisseursPage /></ProtectedRoute>} />
-        <Route path="/entrees" element={<ProtectedRoute page="entrees"><PlaceholderPage title="Entrées stock" icon="ArrowDown" /></ProtectedRoute>} />
-        <Route path="/sorties" element={<ProtectedRoute page="sorties"><PlaceholderPage title="Sorties stock" icon="ArrowUp" /></ProtectedRoute>} />
+        <Route path="/entrees" element={<ProtectedRoute page="entrees"><EntreesPage /></ProtectedRoute>} />
+        <Route path="/sorties" element={<ProtectedRoute page="sorties"><SortiesPage /></ProtectedRoute>} />
         <Route path="/ventes" element={<ProtectedRoute page="ventes"><PlaceholderPage title="Ventes" icon="ShoppingCart" /></ProtectedRoute>} />
         <Route path="/pos" element={<ProtectedRoute page="pos"><PlaceholderPage title="Point de vente" icon="CreditCard" /></ProtectedRoute>} />
         <Route path="/factures" element={<ProtectedRoute page="factures"><PlaceholderPage title="Factures" icon="FileText" /></ProtectedRoute>} />

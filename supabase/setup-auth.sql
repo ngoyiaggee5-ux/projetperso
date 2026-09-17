@@ -108,6 +108,14 @@ CREATE POLICY "users_admin_manage" ON public.utilisateurs
   USING (public.is_admin());
 
 -- 6. Lecture des données métier (utilisateur connecté)
+DROP POLICY IF EXISTS "data_write_roles" ON public.categories;
+DROP POLICY IF EXISTS "fourn_write" ON public.fournisseurs;
+DROP POLICY IF EXISTS "prod_write" ON public.produits;
+DROP POLICY IF EXISTS "entrees_write" ON public.entrees;
+DROP POLICY IF EXISTS "sorties_write" ON public.sorties;
+DROP POLICY IF EXISTS "ventes_write" ON public.ventes;
+DROP POLICY IF EXISTS "details_write" ON public.details_ventes;
+
 DROP POLICY IF EXISTS "data_read_auth" ON public.categories;
 CREATE POLICY "data_read_auth" ON public.categories FOR SELECT USING (auth.uid() IS NOT NULL);
 
