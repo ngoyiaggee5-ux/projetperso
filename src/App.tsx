@@ -8,6 +8,7 @@ import { CategoriesPage } from '@/pages/CategoriesPage'
 import { FournisseursPage } from '@/pages/FournisseursPage'
 import { EntreesPage } from '@/pages/EntreesPage'
 import { SortiesPage } from '@/pages/SortiesPage'
+import { UsersPage } from '@/pages/UsersPage'
 import { PlaceholderPage } from '@/pages/PlaceholderPage'
 import { LoadingScreen } from '@/components/ui/LoadingScreen'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -42,7 +43,7 @@ export default function App() {
         <Route path="/rapports" element={<ProtectedRoute page="rapports"><PlaceholderPage title="Rapports" icon="BarChart3" /></ProtectedRoute>} />
         <Route path="/suggestions" element={<ProtectedRoute page="suggestions"><PlaceholderPage title="Suggestions" icon="Lightbulb" /></ProtectedRoute>} />
         <Route path="/audit" element={<ProtectedRoute page="audit"><PlaceholderPage title="Journal d'audit" icon="History" /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute page="users"><PlaceholderPage title="Gestion utilisateurs" icon="Users" adminOnly /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute page="users"><UsersPage /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute page="settings"><PlaceholderPage title="Paramètres" icon="Settings" adminOnly /></ProtectedRoute>} />
         <Route path="/about" element={<ProtectedRoute page="about"><PlaceholderPage title="À propos" icon="Info" /></ProtectedRoute>} />
       </Route>

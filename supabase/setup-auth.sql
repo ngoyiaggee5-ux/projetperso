@@ -143,7 +143,43 @@ CREATE POLICY "audit_read" ON public.audit_logs FOR SELECT USING (auth.uid() IS 
 DROP POLICY IF EXISTS "audit_insert" ON public.audit_logs;
 CREATE POLICY "audit_insert" ON public.audit_logs FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- 7. Vérification
+-- 7. Profil automatique à chaque inscription Auth (inscription publique)
+CREATE OR REPLACE FUNCTION public.handle_auth_user_created()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  UPDATE public.utilisateurs u
+  SET
+    auth_id = NEW.id,
+    nom = COALESCE(nullif(trim(NEW.raw_user_meta_data->>'nom'), ''), u.nom)
+  WHERE lower(trim(u.email)) = lower(trim(NEW.email));
+
+  IF NOT FOUND THEN
+    INSERT INTO public.utilisateurs (nom, email, role, statut, auth_id, date_creation)
+    VALUES (
+      COALESCE(nullif(trim(NEW.raw_user_meta_data->>'nom'), ''), split_part(NEW.email, '@', 1)),
+      lower(trim(NEW.email)),
+      'magasinier',
+      'pending',
+      NEW.id,
+      timezone('utc', now())
+    );
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_auth_user_created();
+
+-- 8. Vérification
 SELECT u.id, u.nom, u.email, u.role, u.statut, u.auth_id, au.email AS auth_email
 FROM public.utilisateurs u
 LEFT JOIN auth.users au ON au.id = u.auth_id

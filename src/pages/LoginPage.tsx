@@ -55,7 +55,8 @@ export function LoginPage() {
             <Boxes className="h-7 w-7" />
           </div>
           <h2 className="text-2xl font-extrabold text-[#1a2332]">FreshStock</h2>
-          <p className="text-sm text-slate-500">ERP de gestion d'entrepôt</p>
+          <p className="text-sm text-slate-500">ERP de gestion d&apos;entrepôt</p>
+          <p className="mt-1 text-xs text-slate-400">Inscription ouverte — un administrateur active votre compte</p>
         </div>
 
         <div className="mb-6 flex rounded-xl bg-slate-100 p-1">
@@ -102,6 +103,9 @@ export function LoginPage() {
           </form>
         ) : (
           <form onSubmit={handleRegister} className="space-y-1">
+            <p className="mb-3 rounded-lg bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+              Après inscription, connectez-vous une fois votre compte activé par un admin (onglet Utilisateurs).
+            </p>
             <FormGroup>
               <Label>Nom complet</Label>
               <Input value={regNom} onChange={(e) => setRegNom(e.target.value)} required />

@@ -178,13 +178,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           auth_id: data.user.id,
           date_creation: new Date().toISOString(),
         })
-        await addAuditLog({
-          utilisateur: normalizedEmail,
-          action: 'Inscription',
-          details: 'Nouvel utilisateur inscrit - En attente',
-        })
-      } catch (err) {
-        return { error: mapProfileError(err) }
+      } catch {
+        // Trigger handle_auth_user_created ou ligne déjà existante
+        const linked = await fetchProfileByEmail(normalizedEmail)
+        if (!linked) {
+          if (!data.session) {
+            // Confirmation email : pas de session, le trigger SQL crée le profil
+          } else {
+            return { error: 'Inscription Auth OK mais profil non créé. Exécutez supabase/setup-auth.sql (trigger).' }
+          }
+        }
+      }
+      if (data.session) {
+        try {
+          await addAuditLog({
+            utilisateur: normalizedEmail,
+            action: 'Inscription',
+            details: 'Nouvel utilisateur inscrit - En attente',
+          })
+        } catch {
+          // non bloquant
+        }
       }
     }
 

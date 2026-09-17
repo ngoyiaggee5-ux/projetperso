@@ -56,12 +56,20 @@ La v2 utilise **Supabase Auth** (pas `mot_de_passe` de la table).
 3. Exécuter `supabase/setup-auth.sql` (lie `auth_id`, active les comptes, corrige RLS)
 4. Se connecter avec le mot de passe **Supabase Auth**
 
+### Inscription publique (visiteurs)
+
+1. **Authentication → Providers → Email** : activé ; « Confirm email » désactivé recommandé pour l’ERP.
+2. Exécuter `setup-auth.sql` (trigger `handle_auth_user_created` + policies).
+3. Les visiteurs s’inscrivent sur la page **Inscription** → statut `pending`.
+4. L’**admin** ouvre **Utilisateurs** → **Activer** le compte.
+5. L’utilisateur peut alors se connecter.
+
 ### Erreurs courantes
 
 | Message | Solution |
 |---------|----------|
 | Identifiants incorrects | Créer le user dans Authentication (étape 2) |
-| Compte en attente | `UPDATE utilisateurs SET statut = 'active' WHERE email = '...'` |
+| Compte en attente | Admin → **Utilisateurs** → **Activer** |
 | Profil bloqué RLS | Exécuter `setup-auth.sql` |
 
 ## Migration depuis v1 (legacy)
@@ -87,7 +95,8 @@ L'ancienne version est dans `legacy/` (HTML + JS vanilla).
 | Entrées, Sorties stock | ✅ |
 | Ventes, POS, Factures | 🚧 À migrer |
 | Rapports, Suggestions, Audit | 🚧 À migrer |
-| Utilisateurs, Paramètres | 🚧 À migrer |
+| Utilisateurs (activation admin) | ✅ |
+| Paramètres | 🚧 À migrer |
 
 ## Scripts
 
