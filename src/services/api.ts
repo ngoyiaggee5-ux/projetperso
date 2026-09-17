@@ -1,57 +1,65 @@
+import type { PostgrestError } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase'
 import type { AuditLog, Categorie, DetailVente, Entree, Fournisseur, Produit, Sortie, Utilisateur, Vente } from '@/types'
 
+function failTable(table: string, error: PostgrestError): never {
+  const parts = [`[${table}]`, error.message]
+  if (error.code) parts.push(`code ${error.code}`)
+  if (error.details) parts.push(String(error.details))
+  throw new Error(parts.join(' — '))
+}
+
 export async function fetchUtilisateurs() {
   const { data, error } = await supabase.from('utilisateurs').select('*').order('id')
-  if (error) throw error
+  if (error) failTable('utilisateurs', error)
   return data as Utilisateur[]
 }
 
 export async function fetchCategories() {
   const { data, error } = await supabase.from('categories').select('*').order('id')
-  if (error) throw error
+  if (error) failTable('categories', error)
   return data as Categorie[]
 }
 
 export async function fetchFournisseurs() {
   const { data, error } = await supabase.from('fournisseurs').select('*').order('id')
-  if (error) throw error
+  if (error) failTable('fournisseurs', error)
   return data as Fournisseur[]
 }
 
 export async function fetchProduits() {
   const { data, error } = await supabase.from('produits').select('*').order('id')
-  if (error) throw error
+  if (error) failTable('produits', error)
   return data as Produit[]
 }
 
 export async function fetchEntrees() {
   const { data, error } = await supabase.from('entrees').select('*').order('id', { ascending: false })
-  if (error) throw error
+  if (error) failTable('entrees', error)
   return data as Entree[]
 }
 
 export async function fetchSorties() {
   const { data, error } = await supabase.from('sorties').select('*').order('id', { ascending: false })
-  if (error) throw error
+  if (error) failTable('sorties', error)
   return data as Sortie[]
 }
 
 export async function fetchVentes() {
   const { data, error } = await supabase.from('ventes').select('*').order('id', { ascending: false })
-  if (error) throw error
+  if (error) failTable('ventes', error)
   return data as Vente[]
 }
 
 export async function fetchDetailsVentes() {
   const { data, error } = await supabase.from('details_ventes').select('*').order('id')
-  if (error) throw error
+  if (error) failTable('details_ventes', error)
   return data as DetailVente[]
 }
 
 export async function fetchAuditLogs() {
   const { data, error } = await supabase.from('audit_logs').select('*').order('id', { ascending: false })
-  if (error) throw error
+  if (error) failTable('audit_logs', error)
   return data as AuditLog[]
 }
 

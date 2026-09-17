@@ -10,7 +10,7 @@ import { DataError } from '@/components/DataError'
 import { addAuditLog, fetchUtilisateurs, updateUtilisateur } from '@/services/api'
 import type { UserRole, UserStatus, Utilisateur } from '@/types'
 import { ROLE_LABELS } from '@/types'
-import { cn, formatDate } from '@/lib/utils'
+import { cn, formatDate, getErrorMessage } from '@/lib/utils'
 
 const STATUT_LABELS: Record<UserStatus, string> = {
   active: 'Actif',
@@ -82,7 +82,7 @@ export function UsersPage() {
   if (isError) {
     return (
       <DataError
-        message={error instanceof Error ? error.message : 'Impossible de charger les utilisateurs'}
+        message={getErrorMessage(error)}
         onRetry={() => void refetch()}
       />
     )

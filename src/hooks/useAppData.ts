@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import {
   fetchCategories,
   fetchDetailsVentes,
@@ -8,6 +8,7 @@ import {
   fetchSorties,
   fetchVentes,
 } from '@/services/api'
+import { getErrorMessage } from '@/lib/utils'
 
 export type AppDataScope =
   | 'dashboard'
@@ -19,6 +20,12 @@ export type AppDataScope =
 
 function scopeNeeds(scope: AppDataScope, ...scopes: AppDataScope[]) {
   return scopes.includes(scope)
+}
+
+type TrackedQuery = {
+  name: string
+  query: UseQueryResult<unknown, unknown>
+  optional?: boolean
 }
 
 /** Charge uniquement les tables nécessaires à la page (évite erreurs RLS / requêtes inutiles). */
@@ -39,21 +46,27 @@ export function useAppData(scope: AppDataScope = 'dashboard') {
   const ventes = useQuery({ queryKey: ['ventes'], queryFn: fetchVentes, enabled: needVentes })
   const detailsVentes = useQuery({ queryKey: ['details_ventes'], queryFn: fetchDetailsVentes, enabled: needDetails })
 
-  const activeQueries = [
-    ...(needProduits ? [produits] : []),
-    ...(needCategories ? [categories] : []),
-    ...(needFournisseurs ? [fournisseurs] : []),
-    ...(needEntrees ? [entrees] : []),
-    ...(needSorties ? [sorties] : []),
-    ...(needVentes ? [ventes] : []),
-    ...(needDetails ? [detailsVentes] : []),
+  const tracked: TrackedQuery[] = [
+    ...(needProduits ? [{ name: 'produits', query: produits as UseQueryResult<unknown, unknown> }] : []),
+    ...(needCategories ? [{ name: 'categories', query: categories as UseQueryResult<unknown, unknown> }] : []),
+    ...(needFournisseurs ? [{ name: 'fournisseurs', query: fournisseurs as UseQueryResult<unknown, unknown> }] : []),
+    ...(needEntrees ? [{ name: 'entrees', query: entrees as UseQueryResult<unknown, unknown> }] : []),
+    ...(needSorties ? [{ name: 'sorties', query: sorties as UseQueryResult<unknown, unknown> }] : []),
+    ...(needVentes ? [{ name: 'ventes', query: ventes as UseQueryResult<unknown, unknown>, optional: true }] : []),
+    ...(needDetails
+      ? [{ name: 'details_ventes', query: detailsVentes as UseQueryResult<unknown, unknown>, optional: true }]
+      : []),
   ]
 
-  const isLoading = activeQueries.some((q) => q.isLoading)
-  const isError = activeQueries.some((q) => q.isError)
-  const failed = activeQueries.find((q) => q.isError)
-  const errorMessage =
-    failed?.error instanceof Error ? failed.error.message : 'Erreur de chargement des données'
+  const required = tracked.filter((t) => !t.optional)
+  const isLoading = tracked.some((t) => t.query.isLoading)
+  const failedRequired = required.filter((t) => t.query.isError)
+  const isError = failedRequired.length > 0
+  const errorMessage = failedRequired
+    .map((t) => getErrorMessage(t.query.error))
+    .join(' | ')
+
+  const refetchAll = () => Promise.all(tracked.map((t) => t.query.refetch()))
 
   return {
     produits: produits.data ?? [],
@@ -66,6 +79,6 @@ export function useAppData(scope: AppDataScope = 'dashboard') {
     isLoading,
     isError,
     errorMessage,
-    refetchAll: () => Promise.all(activeQueries.map((q) => q.refetch())),
+    refetchAll,
   }
 }

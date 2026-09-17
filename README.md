@@ -48,7 +48,7 @@ La v2 utilise **Supabase Auth** (pas `mot_de_passe` de la table).
 
 ### Étapes (dans l'ordre)
 
-1. Exécuter `supabase/migration.sql` (RLS + policies)
+1. Si projet vide : `supabase/schema.sql` — puis `migration.sql` (RLS + policies)
 2. **Dashboard → Authentication → Users → Add user**
    - Email identique à `utilisateurs` (ex. `admin@freshstock.com`)
    - Nouveau mot de passe (pas l'ancien `admin123`)
@@ -71,6 +71,7 @@ La v2 utilise **Supabase Auth** (pas `mot_de_passe` de la table).
 | Identifiants incorrects | Créer le user dans Authentication (étape 2) |
 | Compte en attente | Admin → **Utilisateurs** → **Activer** |
 | Profil bloqué RLS | Exécuter `setup-auth.sql` |
+| Impossible de charger les données | Exécuter `fix-data-access.sql` (puis voir le détail `[table]` dans l'erreur) |
 
 ## Migration depuis v1 (legacy)
 

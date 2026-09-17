@@ -179,7 +179,13 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW
   EXECUTE FUNCTION public.handle_auth_user_created();
 
--- 8. Vérification
+-- 8. Droits API (authenticated = utilisateur connecté)
+GRANT USAGE ON SCHEMA public TO anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO authenticated;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO anon;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated;
+
+-- 9. Vérification
 SELECT u.id, u.nom, u.email, u.role, u.statut, u.auth_id, au.email AS auth_email
 FROM public.utilisateurs u
 LEFT JOIN auth.users au ON au.id = u.auth_id
